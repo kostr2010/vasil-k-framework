@@ -1,0 +1,81 @@
+<h1 id="введение">Введение</h1>
+<p>Цель заданий: немного мотивировать посмотреть что-то по теме
+формальных семантик и ознакомиться с инструментарием
+<code>K-framework</code> для работы с семантиками языков
+программирования.</p>
+<h1 id="задания">Задания</h1>
+<h2 id="задание-на-8-10-баллов">Задание на 8-10 баллов</h2>
+<p>В данном задании нужно реализовать синтаксис и семантику для языка,
+который бы удовлетворял одному из требований:</p>
+<ul>
+<li><p>Подмножество стандартного императивного языка (а-ля сишник,
+паскаль и тд) с переменными, циклами, операторами ветвления и простыми
+выражениями</p></li>
+<li><p>Нестандартная семантика, например, подмножество языка <a
+href="https://ru.wikipedia.org/wiki/%D0%A4%D0%BE%D1%80%D1%82_(%D1%8F%D0%B7%D1%8B%D0%BA_%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F)">Forth</a></p></li>
+<li><p>Простое подмножество императивного языка, например, только
+переменные, выражения и оператор присваивания, но со сложными
+значениями, например: int, double, complex или <a
+href="https://en.wikipedia.org/wiki/Unum_(number_format)">unum</a></p></li>
+<li><p>Простое подмножество императивного языка, например, только
+переменные, выражения и оператор присваивания, но со сложными типами
+данных, например, со структурами</p></li>
+<li><p>Простое подмножество функционального языка, например, <a
+href="https://ru.wikipedia.org/wiki/Standard_ML">ML</a>, с лямбдами,
+простыми выражениями и оператором let</p></li>
+</ul>
+<p>Если у вас появилось желание реализовать что-то своё, отличное от
+вышеперечисленного, и там будет хотя бы одна-две интересные
+семантические конструкции - это, скорее всего, будет оценено тоже в 8-10
+баллов, но, на всякий случай, лучше заранее со мной обсудить, что вы
+планируете сделать, чтобы было общее понимание на какую оценку сможет
+данная работа претендовать.</p>
+<p>NB!: поддержку функций реализовывать не обязательно.</p>
+<h2 id="задание-на-5-7-баллов">Задание на 5-7 баллов</h2>
+<p>Реализовать язык для научного калькулятора с переменными, оператором
+присваивания и арифметикой.</p>
+<p>Если будет реализовано что-то оригинальное и интересное, есть шанс,
+что работа будет оценена в 8-10 баллов.</p>
+<h2 id="задание-на-3-4-балла">Задание на 3-4 балла</h2>
+<p>Реализовать язык для простых арифметических целочисленных
+выражений.</p>
+<h1 id="полезные-материалы">Полезные материалы</h1>
+<h2 id="k-framework">K-framework</h2>
+<ul>
+<li><a
+href="https://kframework.org/k-distribution/k-tutorial/">K-framework
+tutorial</a></li>
+<li><a href="https://kframework.org/docs/user_manual/">K-framework
+manual</a></li>
+<li><a
+href="https://kframework.org/k-distribution/include/kframework/builtin/">Базовые
+модули K-framework</a></li>
+<li><a
+href="https://kframework.org/k-distribution/pl-tutorial/">Реализация
+учебных ЯП в K-framework</a></li>
+</ul>
+<p>После ознакомления с <code>tutorial</code>, советую посмотреть
+реализации <code>IMP</code> и <code>SIMPLE</code> из учебных ЯП. Этого
+должно быть вполне достаточно для выполнения заданий.</p>
+<h2 id="парадигмы-языков-программирования">Парадигмы языков
+программирования</h2>
+<p>Можно посмотреть <a
+href="https://ru.wikipedia.org/wiki/%D0%9F%D0%B0%D1%80%D0%B0%D0%B4%D0%B8%D0%B3%D0%BC%D0%B0_%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F#:~:text=%D0%9F%D0%B0%D1%80%D0%B0%D0%B4%D0%B8%CC%81%D0%B3%D0%BC%D0%B0%20%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%CC%81%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F%20%E2%80%94%20%D1%8D%D1%82%D0%BE%20%D1%81%D0%BE%D0%B2%D0%BE%D0%BA%D1%83%D0%BF%D0%BD%D0%BE%D1%81%D1%82%D1%8C%20%D0%B8%D0%B4%D0%B5%D0%B9,%D0%B8%20%D1%81%D1%82%D1%80%D1%83%D0%BA%D1%82%D1%83%D1%80%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5%20%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%8B%2C%20%D0%B2%D1%8B%D0%BF%D0%BE%D0%BB%D0%BD%D1%8F%D0%B5%D0%BC%D0%BE%D0%B9%20%D0%BA%D0%BE%D0%BC%D0%BF%D1%8C%D1%8E%D1%82%D0%B5%D1%80%D0%BE%D0%BC.">тут</a>.</p>
+<h2 id="интересные-яп-и-статьи">Интересные ЯП и статьи</h2>
+<ul>
+<li><a href="http://www.vpri.org/pdf/tr2012001_steps.pdf">STEPS project
+by ALan Kay</a></li>
+<li><a href="http://www.picat-lang.org/">Picat</a></li>
+<li><a href="http://ciao-lang.org/">Ciao prolog</a></li>
+<li><a href="https://racket-lang.org/">Racket scheme</a></li>
+<li><a href="https://common-lisp.net/">Common Lisp</a>, <a
+href="https://lisp-lang.org/">Another link</a>, <a
+href="https://habr.com/ru/post/104349/">статья на хабре про
+лисп</a></li>
+<li><a href="https://shen-language.github.io/">Shen</a>, <a
+href="https://shenlanguage.org/">Official website for Shen</a></li>
+<li><a href="https://squeak.org/">Sqeak, a Smalltalk dialect</a></li>
+<li><a
+href="https://learn.adacore.com/courses/intro-to-spark/index.html">Ada/SPARK
+- программирование для авионики и тд</a></li>
+</ul>
