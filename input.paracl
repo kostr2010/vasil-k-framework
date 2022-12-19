@@ -1,1 +1,2 @@
-24 * (false + true)
+int a  = 5 + 3
+int b = a + 1
