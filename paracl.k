@@ -3,24 +3,29 @@ module PARACL-SYNTAX
     imports BOOL-SYNTAX
     imports ID-SYNTAX
 
+    syntax TypeId ::= "int" | "bool"
     syntax IntegralType ::= Bool | Int
-
-    syntax Bool ::= ToBool(IntegralType) [function]
-    syntax BoolExp ::= IntegralType
-                    | "(" BoolExp ")" [bracket]
-                    > "!" BoolExp [function]
-                    > left: BoolExp "&&" BoolExp [function]
-                    > left: BoolExp "^" BoolExp [function]
-                    > left: BoolExp "||" BoolExp [function]
+    syntax Variable ::= Id
+    syntax ValueHolders ::= IntegralType | Variable
 
     syntax Int ::= ToInt(IntegralType)  [function]
-    syntax IntExp ::= IntegralType
-                  |  "(" IntExp ")" [bracket]
-                  > left: IntExp "*" IntExp [function]
-                  | IntExp "**" IntExp [function]
-                  | IntExp "/" IntExp [function]
-                  > left: IntExp "+" IntExp [function]
-                  | IntExp "-" IntExp [function]
+    syntax Bool ::= ToBool(IntegralType) [function]
+    syntax Exp ::= IntegralType
+                |  "(" Exp ")" [bracket]
+                > left: "!" Exp [function]
+                > left: Exp "**" Exp [function]
+                > left: Exp "*" Exp [function]
+                |       Exp "/" Exp [function]
+                > left: Exp "+" Exp [function]
+                |       Exp "-" Exp [function]
+                > left: Exp "^" Exp [function]
+                > left: Exp "&&" Exp [function]
+                > left: Exp "||" Exp [function]
+
+    syntax VarDecl ::= TypeId Id "=" Exp
+    syntax Pgm ::= VarDecl
+
+    syntax VarAssign ::= Id "=" Exp
 
 endmodule
 
@@ -29,6 +34,11 @@ module PARACL
     imports BOOL
     imports ID
     imports PARACL-SYNTAX
+
+    // configuration <T>
+    //               <k> $PGM:Pgm </k>
+    //               <state> .Map </state>
+    //             </T>
 
     rule ToInt(I:Int) => I
     rule ToInt(false:Bool) => 0
@@ -48,5 +58,17 @@ module PARACL
     rule A * B => {ToInt(A)}:>Int *Int {ToInt(B)}:>Int
     rule A / B => {ToInt(A)}:>Int /Int {ToInt(B)}:>Int
     rule A ** B => {ToInt(A)}:>Int ^Int {ToInt(B)}:>Int
+
+    // // declaration sequence
+    // rule <k> D:VarDecl P:Pgm => D ~> P ...</k>
+    // rule <k> .Pgm => . ...</k>
+
+    // // variable declaration
+    // rule <k> int X:Id = I:Int ; => . ...</k>
+    //      <state> STATE => STATE [ X <- I ] </state>
+
+    // // variable lookup
+    // rule <k> X:Id => I ...</k>
+    //    <state>... X |-> I ...</state>
     
 endmodule
