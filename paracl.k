@@ -44,15 +44,16 @@ module PARACL-SYNTAX
 
     // define syntax for blocks of code
     syntax Assign ::= Variable "=" Exp [strict(2)]
-    syntax Block ::= "{" "}" | "{" Stmts "}"
-    syntax Stmt ::= Assign | Block
-                | "if" "(" Exp ")" Block "else" Block [strict]
-                | "if" "(" Exp ")" Block [strict]
-                | "while" "(" Exp ")" Block [strict]
-                | "for" "(" Stmt ";" Exp ";" Exp ")" Block [strict]
-    // syntax Stmt ::= Stmt Stmt [seqstrict, right]
+    syntax Stmt ::= Assign
+                | Stmt Stmt [left]
+                | Block
+                | "if" "(" Exp ")" Block "else" Block  [strict(1)]
+                | "if" "(" Exp ")" Block  [strict(1)]
+                | "while" "(" Exp ")" Block  [strict(1)]
+                | "for" "(" Stmt ";" Exp ";" Exp ")" Block  [strict]
+    syntax Block ::= "{" Stmt "}" | "{" "}"
 
-    syntax Stmts ::= List{Stmt,""}          [strict]
+    // syntax Stmts ::= List{Stmt,""} [strict]
 endmodule
 
 module PARACL
@@ -65,25 +66,34 @@ module PARACL
     imports PARACL-SYNTAX
     imports DOMAINS
 
+    // rule {S:Stmts} => S:Stmts
     // desugaring
     // rule if (B:Exp) E1:Block else E2:Exp => #if B #then E1 #else E2 #fi
     // rule S1:Stmt S2:Stmt => S1 ~> S2  [structural]
     // rule if (E) S => if (E) S else {}
-    // rule if ( true) S else _ => S
-    // rule if (false) _ else S => S
+
     // rule for(Start; Cond; Step) {S} => Start while (Cond) {S Step}
     // rule for(Start; Cond; Step) {} => Start while (Cond) {Step}
     // rule while (E) S => if (E) {S while(E) {S} }
 
     configuration
     <T>
-        <k> $PGM:Stmts </k>
+        <k> $PGM:Stmt </k>
         <state> .Map </state>
     </T>
 
-    // declaration sequence
-    rule <k> D:Stmt P:Stmts => D ~> P ...</k>
-    rule <k> .Stmts => . ...</k>
+    rule <k> S1:Stmt S2:Stmt => S1 ~> S2 ... </k>
+
+    rule <k> { S } => S ... </k>
+    rule <k> {   } => . ... </k>
+    
+    rule <k> if (true:Bool) S else _ => S ... </k>
+    rule <k> if (false:Bool) _ else S => S ... </k>
+    rule <k> if (E:ValueHolder) THEN else ELSE => if (ToBool(E)) THEN else ELSE ... </k> [owise]
+
+    rule <k> if (true:Bool) S  => S ... </k>
+    rule <k> if (false:Bool) _ => . ... </k>
+    rule <k> if (E:ValueHolder) THEN => if (ToBool(E)) THEN ... </k> [owise]
 
     // variable declaration
     rule <k> X:Id = I:IntegralType => . ...</k>
