@@ -2,107 +2,129 @@ module PARACL-SYNTAX
     imports INT-SYNTAX
     imports BOOL-SYNTAX
     imports ID-SYNTAX
+    imports DOMAINS-SYNTAX
 
-    // syntax #Layout ::= r"(;[^\\n\\r]*)"
-    //                  | r"([\\ \\n\\r\\t])"
+    syntax TypeId ::= "int" | "bool"
+    syntax TypeIds ::= List{TypeId,","}
 
-    syntax TypeId ::= "int"
     syntax IntegralType ::= Bool | Int
     syntax Variable ::= Id
     syntax ValueHolder ::= IntegralType | Variable
 
-    // syntax SLComment ::= r"^\/\/((\\\n)|[^\n])*"
-    // syntax MLComment ::= r"^\/\*(.*)\*\/"
-    // syntax Comment ::= SLComment | MLComment
-    // syntax EOL ::= "" | Comment
-
-    syntax Int ::= ToInt(IntegralType) [function]
-    syntax Bool ::= ToBool(IntegralType) [function]
+    // basic expressions
+    syntax Int ::= ToInt(ValueHolder) [function]
+    syntax Bool ::= ToBool(ValueHolder) [function]
+    syntax IntegralType ::= Lookup(Variable)
     syntax Exp ::= ValueHolder
-                |  "(" Exp ")" [bracket]
-                > left: "!" Exp [function]
-                > left: Exp "**" Exp [function]
-                > left: Exp "*" Exp [function]
-                |       Exp "/" Exp [function]
-                > left: Exp "+" Exp [function]
-                |       Exp "-" Exp [function]
-                > left: Exp "^" Exp [function]
-                > left: Exp "&&" Exp [function]
-                > left: Exp "||" Exp [function]
-    // syntax Exp ::= Id | Int | Bool
+                 | "(" Exp ")" [bracket]
+                 > left: 
+                   "!" Exp [strict]
+                 > left: 
+                   Exp "**" Exp [strict]
+                 > left: 
+                   Exp "*" Exp [strict]
+                 | Exp "/" Exp [strict]
+                 | Exp "%" Exp [strict]
+                 > left: 
+                   Exp "+" Exp [strict]
+                 | Exp "-" Exp [strict]
+                 > non-assoc: 
+                   Exp "<" Exp [strict]
+                 | Exp "<=" Exp [strict]
+                 | Exp ">" Exp [strict]
+                 | Exp ">=" Exp [strict]
+                 | Exp "==" Exp [strict]
+                 | Exp "!=" Exp [strict]
+                 > left: 
+                   Exp "^" Exp [strict]
+                 > left: 
+                   Exp "&&" Exp [strict]
+                 > left: 
+                   Exp "||" Exp [strict]
 
-    syntax VarDecl ::= "int" Variable "=" Exp [strict(2)]
-                     | "bool" Variable "=" Exp [strict(2)]
-    syntax VarAssign ::= Variable "=" Exp
+    // define syntax for blocks of code
+    syntax Assign ::= Variable "=" Exp [strict(2)]
+    syntax Block ::= "{" "}" | "{" Stmts "}"
+    syntax Stmt ::= Assign | Block
+                | "if" "(" Exp ")" Block "else" Block [strict]
+                | "if" "(" Exp ")" Block [strict]
+                | "while" "(" Exp ")" Block [strict]
+                | "for" "(" Stmt ";" Exp ";" Exp ")" Block [strict]
+    // syntax Stmt ::= Stmt Stmt [seqstrict, right]
 
-    syntax Pgm ::= List{VarDecl, ""}
-
+    syntax Stmts ::= List{Stmt,""}          [strict]
 endmodule
 
 module PARACL
     imports INT
     imports BOOL
     imports ID
+    imports STRING
     imports MAP
     imports LIST
     imports PARACL-SYNTAX
+    imports DOMAINS
 
-    configuration <T>
-                  <k> $PGM:Pgm </k>
-                  <state> .Map </state>
-                </T>
+    // desugaring
+    // rule if (B:Exp) E1:Block else E2:Exp => #if B #then E1 #else E2 #fi
+    // rule S1:Stmt S2:Stmt => S1 ~> S2  [structural]
+    // rule if (E) S => if (E) S else {}
+    // rule if ( true) S else _ => S
+    // rule if (false) _ else S => S
+    // rule for(Start; Cond; Step) {S} => Start while (Cond) {S Step}
+    // rule for(Start; Cond; Step) {} => Start while (Cond) {Step}
+    // rule while (E) S => if (E) {S while(E) {S} }
 
+    configuration
+    <T>
+        <k> $PGM:Stmts </k>
+        <state> .Map </state>
+    </T>
+
+    // declaration sequence
+    rule <k> D:Stmt P:Stmts => D ~> P ...</k>
+    rule <k> .Stmts => . ...</k>
+
+    // variable declaration
+    rule <k> X:Id = I:IntegralType => . ...</k>
+        <state> STATE => STATE [ X <- I ] </state> [assign]
+
+    // variable lookup
+    rule <k> X:Id => I:IntegralType ...</k>
+        <state>... X |-> I ...</state> [lookup]
+
+    // rule <k> Lookup(L:Id) => V ...</k> 
+    //     <state>... L |-> V ...</state> [lookup]
+
+    // rule ToInt(I:Id) => ToInt(Lookup(I:Id))
     rule ToInt(I:Int) => I
     rule ToInt(false:Bool) => 0
     rule ToInt(true:Bool) => 1
-    // rule <k> X:Id => A ...</k>
-    //      <state>... X |-> A ...</state>
 
+    // rule ToBool(B:Id) => ToBool(lookup(B:Id))
     rule ToBool(B:Bool) => B
     rule ToBool(0:Int) => false
     rule ToBool(_:Int) => true [owise]
-    // rule <k> X:Id => A ...</k>
-    //      <state>... X |-> A ...</state>
 
-    rule ! B => notBool {ToBool(B)}:>Bool
-    rule A && B => {ToBool(A)}:>Bool andBool {ToBool(B)}:>Bool
-    rule A ^ B => {ToBool(A)}:>Bool xorBool {ToBool(B)}:>Bool
-    rule A || B => {ToBool(A)}:>Bool orBool {ToBool(B)}:>Bool
-    rule A:Int + B:Int => {ToInt(A)}:>Int +Int {ToInt(B)}:>Int
-
-    // rule <k> X:Id + Y:Id => A +Int B ...</k> 
-    //      <state>... X |-> A ...</state>
-    //      <state>... Y |-> B ...</state>
-
-    rule A - B => {ToInt(A)}:>Int -Int {ToInt(B)}:>Int
-    rule A * B => {ToInt(A)}:>Int *Int {ToInt(B)}:>Int
-    rule A / B => {ToInt(A)}:>Int /Int {ToInt(B)}:>Int
-    rule A ** B => {ToInt(A)}:>Int ^Int {ToInt(B)}:>Int
-
-    // declaration sequence
-    rule <k> D:VarDecl P:Pgm => D ~> P ...</k>
-    rule <k> .Pgm => . ...</k>
-
-    // variable declaration
-    rule <k> int X:Id = I:Int => Exp ...</k>
-         <state> STATE => STATE [ X <- I ] </state>
+    rule <k> ! B => notBool {ToBool(B)}:>Bool ...</k>
+    rule <k> A && B => {ToBool(A)}:>Bool andBool {ToBool(B)}:>Bool ...</k>
+    rule <k> A ^ B => {ToBool(A)}:>Bool xorBool {ToBool(B)}:>Bool ...</k>
+    rule <k> A || B => {ToBool(A)}:>Bool orBool {ToBool(B)}:>Bool ...</k>
     
-    rule <k> bool Y:Id = B:Bool => Exp ...</k>
-         <state> STATE => STATE [ Y <- B ] </state>
+    rule <k> A < B => {ToInt(A)}:>Int <Int {ToInt(B)}:>Int ...</k>
+    rule <k> A > B => {ToInt(A)}:>Int >Int {ToInt(B)}:>Int ...</k>
+    rule <k> A <= B => {ToInt(A)}:>Int <=Int {ToInt(B)}:>Int ...</k>
+    rule <k> A >= B => {ToInt(A)}:>Int >=Int {ToInt(B)}:>Int ...</k>
+    rule <k> A == B => {ToInt(A)}:>Int ==Int {ToInt(B)}:>Int ...</k>
+    rule <k> A != B => {ToInt(A)}:>Int =/=Int {ToInt(B)}:>Int ...</k>
 
-    // variable lookup
-    rule <k> X:Id => A ...</k>
-         <state>... X |-> A ...</state>
+    rule <k> A + B  => {ToInt(A)}:>Int +Int {ToInt(B)}:>Int ...</k>
+    rule <k> A - B  => {ToInt(A)}:>Int -Int {ToInt(B)}:>Int ...</k>
+    rule <k> A * B  => {ToInt(A)}:>Int *Int {ToInt(B)}:>Int ...</k>
+    rule <k> A / B  => {ToInt(A)}:>Int /Int {ToInt(B)}:>Int ...</k>
+    rule <k> A ** B => {ToInt(A)}:>Int ^Int {ToInt(B)}:>Int ...</k>
+    rule <k> A % B  => {ToInt(A)}:>Int %Int {ToInt(B)}:>Int ...</k>
 
-    // rule <k> T:Type X:Id; => stmt ...</k>
-    //         <gtenv> Rho (.Map => X |-> T) </gtenv>
-    //     requires notBool(X in keys(Rho))
+    syntax KResult ::= IntegralType
 
-    // rule <k> T:Type X:Id; => stmt ...</k> <tenv> Rho => Rho[X <- T] </tenv>
-
-
-    syntax Bool ::= isKResult(K) [symbol, function]
-    rule isKResult(_:IntegralType) => true
-    rule isKResult(_) => false [owise]
-    
 endmodule
