@@ -4,19 +4,19 @@ module PARACL-SYNTAX
     imports ID-SYNTAX
     imports DOMAINS-SYNTAX
 
-    syntax TypeId ::= "int" | "bool"
-    syntax TypeIds ::= List{TypeId,","}
-
     syntax IntegralType ::= Bool | Int
     syntax Variable ::= Id
     syntax ValueHolder ::= IntegralType | Variable
 
-    // basic expressions
     syntax Int ::= ToInt(ValueHolder) [function]
     syntax Bool ::= ToBool(ValueHolder) [function]
     syntax IntegralType ::= Lookup(Variable)
     syntax Exp ::= ValueHolder
                  | "(" Exp ")" [bracket]
+                 | "++" Exp
+                 | "--" Exp
+                 | Exp "++"
+                 | Exp "--"
                  > left: 
                    "!" Exp [strict]
                  > left: 
@@ -41,19 +41,23 @@ module PARACL-SYNTAX
                    Exp "&&" Exp [strict]
                  > left: 
                    Exp "||" Exp [strict]
+                 | Variable "=" Exp [strict(2), right]
+                 | Variable "+=" Exp [strict(2), right]
+                 | Variable "-=" Exp [strict(2), right]
+                 | Variable "*=" Exp [strict(2), right]
+                 | Variable "/=" Exp [strict(2), right]
+                 | Variable "%=" Exp [strict(2), right]
 
-    // define syntax for blocks of code
-    syntax Assign ::= Variable "=" Exp [strict(2)]
-    syntax Stmt ::= Assign
+    syntax Block ::= "{" Stmt "}" | "{" "}"
+
+    syntax Stmt ::= Exp ";" [strict]
                 | Stmt Stmt [left]
                 | Block
                 | "if" "(" Exp ")" Block "else" Block  [strict(1)]
                 | "if" "(" Exp ")" Block  [strict(1)]
                 | "while" "(" Exp ")" Block  [strict(1)]
-                | "for" "(" Stmt ";" Exp ";" Exp ")" Block  [strict]
-    syntax Block ::= "{" Stmt "}" | "{" "}"
-
-    // syntax Stmts ::= List{Stmt,""} [strict]
+                | "do" Block "while" "(" Exp ")"
+                | "for" "(" Exp ";" Exp ";" Exp ")" Block
 endmodule
 
 module PARACL
@@ -66,16 +70,6 @@ module PARACL
     imports PARACL-SYNTAX
     imports DOMAINS
 
-    // rule {S:Stmts} => S:Stmts
-    // desugaring
-    // rule if (B:Exp) E1:Block else E2:Exp => #if B #then E1 #else E2 #fi
-    // rule S1:Stmt S2:Stmt => S1 ~> S2  [structural]
-    // rule if (E) S => if (E) S else {}
-
-    // rule for(Start; Cond; Step) {S} => Start while (Cond) {S Step}
-    // rule for(Start; Cond; Step) {} => Start while (Cond) {Step}
-    // rule while (E) S => if (E) {S while(E) {S} }
-
     configuration
     <T>
         <k> $PGM:Stmt </k>
@@ -83,28 +77,27 @@ module PARACL
     </T>
 
     rule <k> S1:Stmt S2:Stmt => S1 ~> S2 ... </k>
+    rule _:IntegralType ; => .
 
-    rule <k> { S } => S ... </k>
-    rule <k> {   } => . ... </k>
-    
-    rule <k> if (true:Bool) S else _ => S ... </k>
-    rule <k> if (false:Bool) _ else S => S ... </k>
-    rule <k> if (E:ValueHolder) THEN else ELSE => if (ToBool(E)) THEN else ELSE ... </k> [owise]
+    // implicit lookup
+    rule <k> X:Variable => I:IntegralType ...</k>
+        <state>... X |-> I ...</state>
 
-    rule <k> if (true:Bool) S  => S ... </k>
-    rule <k> if (false:Bool) _ => . ... </k>
-    rule <k> if (E:ValueHolder) THEN => if (ToBool(E)) THEN ... </k> [owise]
+    // explicit lookup, check if something is lvalue
+    // right now is redundant, as only :Variable can be lvalue,
+    // but in future it might change
+    // rule <k> Lvalue(L:Id) => V ...</k> 
+    //     <state>... L |-> V ...</state>
 
-    // variable declaration
-    rule <k> X:Id = I:IntegralType => . ...</k>
-        <state> STATE => STATE [ X <- I ] </state> [assign]
+    // assignment
+    rule <k> X:Variable = I:IntegralType => I ...</k>
+        <state> STATE => STATE [ X <- I ] </state>
 
-    // variable lookup
-    rule <k> X:Id => I:IntegralType ...</k>
-        <state>... X |-> I ...</state> [lookup]
-
-    // rule <k> Lookup(L:Id) => V ...</k> 
-    //     <state>... L |-> V ...</state> [lookup]
+    rule <k> X:Variable += I:IntegralType => X = X + I ... </k>
+    rule <k> X:Variable -= I:IntegralType => X = X - I ... </k>
+    rule <k> X:Variable *= I:IntegralType => X = X * I ... </k>
+    rule <k> X:Variable /= I:IntegralType => X = X / I ... </k>
+    rule <k> X:Variable %= I:IntegralType => X = X % I ... </k>
 
     // rule ToInt(I:Id) => ToInt(Lookup(I:Id))
     rule ToInt(I:Int) => I
@@ -128,12 +121,39 @@ module PARACL
     rule <k> A == B => {ToInt(A)}:>Int ==Int {ToInt(B)}:>Int ...</k>
     rule <k> A != B => {ToInt(A)}:>Int =/=Int {ToInt(B)}:>Int ...</k>
 
-    rule <k> A + B  => {ToInt(A)}:>Int +Int {ToInt(B)}:>Int ...</k>
+    rule <k> A + B => {ToInt(A)}:>Int +Int {ToInt(B)}:>Int ...</k>
     rule <k> A - B  => {ToInt(A)}:>Int -Int {ToInt(B)}:>Int ...</k>
-    rule <k> A * B  => {ToInt(A)}:>Int *Int {ToInt(B)}:>Int ...</k>
-    rule <k> A / B  => {ToInt(A)}:>Int /Int {ToInt(B)}:>Int ...</k>
+    rule <k> A * B => {ToInt(A)}:>Int *Int {ToInt(B)}:>Int ...</k>
+    rule <k> A / B => {ToInt(A)}:>Int /Int {ToInt(B)}:>Int ...</k>
     rule <k> A ** B => {ToInt(A)}:>Int ^Int {ToInt(B)}:>Int ...</k>
-    rule <k> A % B  => {ToInt(A)}:>Int %Int {ToInt(B)}:>Int ...</k>
+    rule <k> A % B => {ToInt(A)}:>Int %Int {ToInt(B)}:>Int ...</k>
+
+    rule <k> ++ X:Variable => I + 1 ...</k>
+       <state>... X |-> (I => {ToInt(I)}:>Int +Int 1) ...</state>
+    rule <k> -- X:Variable => I - 1 ...</k>
+       <state>... X |-> (I => {ToInt(I)}:>Int -Int 1) ...</state>
+
+    rule <k> X:Variable ++ => I ...</k>
+       <state>... X |-> (I => {ToInt(I)}:>Int +Int 1) ...</state>
+    rule <k> X:Variable -- => I ...</k>
+       <state>... X |-> (I => {ToInt(I)}:>Int -Int 1) ...</state>
+
+    rule <k> { S:Stmt } => S:Stmt ... </k>
+    rule <k> {   } => . ... </k>
+    
+    rule <k> if (true:Bool) S else _ => S ... </k>
+    rule <k> if (false:Bool) _ else S => S ... </k>
+    rule <k> if (COND:ValueHolder) THEN:Block else ELSE:Block => if (ToBool(COND)) THEN else ELSE ... </k> [owise]
+
+    rule <k> if (true:Bool) S  => S ... </k>
+    rule <k> if (false:Bool) _ => . ... </k>
+    rule <k> if (COND:ValueHolder) THEN:Block => if (ToBool(COND)) THEN ... </k> [owise]
+
+    rule <k> while ( COND ) BODY => if ( COND ) { BODY while ( COND ) BODY } ... </k>
+
+    rule <k> do BODY while ( COND ) => BODY while (COND) BODY ... </k>
+
+    rule <k> for ( INIT ; STOP ; STEP ) BODY => {INIT ; while ( STOP ) { BODY STEP; }} ... </k>
 
     syntax KResult ::= IntegralType
 
